@@ -39,4 +39,4 @@ jobs:
       - name: Build scanner
         working-directory: scanner
         run: |
-          ./scanner --target 127.0.0.1 --ports 22,80 || exit 1
+          nc -l 12345 >/dev/null 2>&1 & sleep 0.1; ./scanner --target 127.0.0.1 --ports 12345 || exit 1
