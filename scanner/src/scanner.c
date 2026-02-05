@@ -1,7 +1,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <argp.h>
+#include <time.h>
 #include "tcp_connect.h"
+#include "util.h"
 
 const char *argp_program_version = "scanner v0.1";
 const char *argp_program_bug_address = "...";
@@ -46,11 +48,14 @@ int main(int argc, char **argv)
   printf("Ports: %s\n", arguments.ports ? arguments.ports : "(none)");
 
   int port = 0;
+  time_t currentTime;
   if (arguments.ports) {
     port = atoi(arguments.ports);
   }
 
-  tcp_connect(arguments.target, port);
+  enum port_state state = tcp_connect(arguments.target, port);
+  time(&currentTime); // Get current time
+  print_result_json(currentTime, arguments.target, port, state);
 
   exit(0);
 }
