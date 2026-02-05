@@ -1,7 +1,9 @@
-# builds
+# ===== C build artifacts =====
 
 scanner/scanner
-
+scanner/*.o
+scanner/*.so
+scanner/*.a
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
