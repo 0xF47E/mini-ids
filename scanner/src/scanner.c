@@ -44,8 +44,8 @@ int main(int argc, char **argv)
   
   argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
-  printf("Target: %s\n", arguments.target ? arguments.target : "(none)");
-  printf("Ports: %s\n", arguments.ports ? arguments.ports : "(none)");
+/* printf("Target: %s\n", arguments.target ? arguments.target : "(none)"); */
+/* printf("Ports: %s\n", arguments.ports ? arguments.ports : "(none)"); */
 
   int port = 0;
   time_t currentTime;
