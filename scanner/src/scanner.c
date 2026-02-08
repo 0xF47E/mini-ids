@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <argp.h>
 #include <time.h>
+#include <string.h>
 #include "tcp_connect.h"
 #include "util.h"
 
@@ -44,18 +45,34 @@ int main(int argc, char **argv)
   
   argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
-/* printf("Target: %s\n", arguments.target ? arguments.target : "(none)"); */
-/* printf("Ports: %s\n", arguments.ports ? arguments.ports : "(none)"); */
-
-  int port = 0;
+  int port_array[100];
+  char port_argument[100];
   time_t currentTime;
+  
+  /* Checks if the port argument is given. */
   if (arguments.ports) {
-    port = atoi(arguments.ports);
+    strcpy(port_argument, arguments.ports);
   }
 
-  enum port_state state = tcp_connect(arguments.target, port);
-  time(&currentTime); // Get current time
-  print_result_json(currentTime, arguments.target, port, state);
+  /* Splits the port arguments by "," */
+  char* token = strtok(port_argument, ",");
+  int iterator = 0;
+
+  while(token != NULL){
+    port_array[iterator] = atoi(token);
+    iterator++;
+    token = strtok(NULL, " , ");
+  }
+
+  /* Scans the ports*/
+  int port;
+
+  for (int i = 0;port_array[i]>0;i++) {
+    port = port_array[i];
+    enum port_state state = tcp_connect(arguments.target, port);
+    time(&currentTime);
+    print_result_json(currentTime, arguments.target, port, state);
+  }
 
   exit(0);
 }
