@@ -5,7 +5,7 @@ from pathlib import Path
 PROJECT_PATH = Path(__file__).resolve().parent.parent.parent
 DATA_PATH = PROJECT_PATH / "data"
 
-def save(outfile, records):
+def save(records):
     with open(str(DATA_PATH / "scan.log"), "a") as f:
         for record in records:
             f.write(json.dumps(record) + "\n")
