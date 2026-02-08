@@ -36,7 +36,12 @@ jobs:
         run: make
         
       # Run a basic test
-      - name: Build scanner
+      - name: Test scanner
         working-directory: scanner
         run: |
           nc -l 12345 >/dev/null 2>&1 & sleep 0.1; ./scanner --target 127.0.0.1 --ports 12345 || exit 1
+
+      - name: Test scanner 2
+        working-directory: scanner
+        run: |
+          ./scanner -t 127.0.0.1 -p 22,80 || exit 1 
