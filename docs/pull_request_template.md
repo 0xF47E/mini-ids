@@ -8,4 +8,4 @@
 
 ## Testing
 
--[] Tested locally
+- [ ] Tested locally
