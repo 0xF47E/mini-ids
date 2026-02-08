@@ -23,5 +23,5 @@ void print_result_json(
   int port,
   enum port_state state
 ) {
-  printf("{\"ts\":%ld,\"target\":\"%s\",\"port\":%d,\"state\":\"%s\"}", ts, target, port, state_to_string(state));
+  printf("{\"ts\":%ld,\"target\":\"%s\",\"port\":%d,\"state\":\"%s\"}\n", ts, target, port, state_to_string(state));
 }
