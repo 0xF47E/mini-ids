@@ -16,8 +16,7 @@ static struct argp_option options[] = {
   {0}
 };
 
-struct arguments
-{
+struct arguments {
   char *target;
   char *ports;
 };
@@ -25,7 +24,7 @@ struct arguments
 static error_t parse_opt(int key, char *arg, struct argp_state *state) {
   struct arguments *arguments = state->input;
 
-  switch(key) {
+  switch (key) {
     case 't':
       arguments->target = arg;
       break;
@@ -45,7 +44,11 @@ int main(int argc, char **argv)
   
   argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
-  int port_array[100];
+  int *ptr = (int *)malloc(sizeof(int) * 1);
+  if (ptr == NULL) {
+    printf("Allocation failed");
+    exit(1);
+  }
   char port_argument[100];
   time_t currentTime;
   
@@ -56,10 +59,20 @@ int main(int argc, char **argv)
 
   /* Splits the port arguments by "," */
   char* token = strtok(port_argument, ",");
+
+  int capacity = 1;
   int iterator = 0;
 
-  while(token != NULL){
-    port_array[iterator] = atoi(token);
+  while (token != NULL){
+    if (capacity == iterator) {
+      capacity = capacity * 2;
+      ptr = (int *)realloc(ptr, capacity * sizeof(int));
+    }
+    if (ptr == NULL){
+      printf("Memory reallocation failed");
+      exit(1);
+    }
+    ptr[iterator] = atoi(token);
     iterator++;
     token = strtok(NULL, " , ");
   }
@@ -67,12 +80,13 @@ int main(int argc, char **argv)
   /* Scans the ports*/
   int port;
 
-  for (int i = 0;port_array[i]>0;i++) {
-    port = port_array[i];
+  for (int i = 0; i < iterator; i++) {
+    port = ptr[i];
     enum port_state state = tcp_connect(arguments.target, port);
     time(&currentTime);
     print_result_json(currentTime, arguments.target, port, state);
   }
+  free(ptr);
 
   exit(0);
 }
