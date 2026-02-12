@@ -3,6 +3,7 @@
 #include <argp.h>
 #include <time.h>
 #include <string.h>
+#include "ports.h"
 #include "tcp_connect.h"
 #include "util.h"
 
@@ -44,49 +45,30 @@ int main(int argc, char **argv)
   
   argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
-  int *ptr = (int *)malloc(sizeof(int) * 1);
-  if (ptr == NULL) {
-    printf("Allocation failed");
+  time_t currentTime;
+
+  /* Checks if the port argument is given. */
+  if (!arguments.ports) {
     exit(1);
   }
-  char port_argument[100];
-  time_t currentTime;
   
-  /* Checks if the port argument is given. */
-  if (arguments.ports) {
-    strcpy(port_argument, arguments.ports);
-  }
-
-  /* Splits the port arguments by "," */
-  char* token = strtok(port_argument, ",");
-
-  int capacity = 1;
-  int iterator = 0;
-
-  while (token != NULL){
-    if (capacity == iterator) {
-      capacity = capacity * 2;
-      ptr = (int *)realloc(ptr, capacity * sizeof(int));
-    }
-    if (ptr == NULL){
-      printf("Memory reallocation failed");
-      exit(1);
-    }
-    ptr[iterator] = atoi(token);
-    iterator++;
-    token = strtok(NULL, " , ");
+  struct port_list portList;
+  int return_code = parse_ports(arguments.ports, &portList);
+  if (return_code != 0) {
+    printf("Somethin went sideways blyat");
+    exit(1);
   }
 
   /* Scans the ports*/
   int port;
 
-  for (int i = 0; i < iterator; i++) {
-    port = ptr[i];
+  for (int i = 0; i < portList.count; i++) {
+    port = portList.ports[i];
     enum port_state state = tcp_connect(arguments.target, port);
     time(&currentTime);
     print_result_json(currentTime, arguments.target, port, state);
   }
-  free(ptr);
+  free_ports(&portList);
 
   exit(0);
 }
