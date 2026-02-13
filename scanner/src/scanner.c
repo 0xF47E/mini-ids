@@ -55,9 +55,11 @@ int main(int argc, char **argv)
   struct port_list portList;
   int return_code = parse_ports(arguments.ports, &portList);
   if (return_code != 0) {
-    printf("Somethin went sideways blyat");
+    printf("Something went sideways.\n");
     exit(1);
   }
+
+  sort_port_array(&portList);
 
   /* Scans the ports*/
   int port;
