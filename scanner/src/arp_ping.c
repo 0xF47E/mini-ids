@@ -1,5 +1,9 @@
 #include "arp_ping.h"
 #include <arpa/inet.h>
+#include <asm-generic/errno-base.h>
+#include <asm-generic/errno.h>
+#include <asm-generic/socket.h>
+#include <errno.h>
 #include <linux/if_packet.h>
 #include <net/ethernet.h>
 #include <net/if.h>
@@ -10,6 +14,7 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
+#include <unistd.h>
 
 struct arp_hdr {
   __be16 hw_type;
@@ -32,18 +37,19 @@ enum host_state arp_ping(char addr[]) {
 
   int status, socket_fd;
   if ((socket_fd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ARP))) < 0) {
+    perror("socket problem");
     return HOST_ERROR;
   }
 
   // Get interface details (MAC, IP, index)
   struct ifreq ifr;
-  const char *iface = "wlan0";
+  const char *iface = "enp5s0";
   strncpy(ifr.ifr_name, iface, IFNAMSIZ - 1);
 
   // Get interface index
   if (ioctl(socket_fd, SIOCGIFINDEX, &ifr) < 0) {
     perror("ioctl (SIOCGIFINDEX) failed");
-    exit(EXIT_FAILURE);
+    return HOST_ERROR;
   }
 
   int ifindex = ifr.ifr_ifindex;
@@ -51,7 +57,7 @@ enum host_state arp_ping(char addr[]) {
   // Get MAC address
   if (ioctl(socket_fd, SIOCGIFHWADDR, &ifr) < 0) {
     perror("ioctl (SIOCGIFHWADDR) failed");
-    exit(EXIT_FAILURE);
+    return HOST_ERROR;
   }
 
   unsigned char *sender_mac = (unsigned char *)ifr.ifr_hwaddr.sa_data;
@@ -59,7 +65,7 @@ enum host_state arp_ping(char addr[]) {
   // Get IP address
   if (ioctl(socket_fd, SIOCGIFADDR, &ifr) < 0) {
     perror("ioctl (SIOCGIFADDR) failed");
-    exit(EXIT_FAILURE);
+    return HOST_ERROR;
   }
 
   struct sockaddr_in *sender_ip_addr = (struct sockaddr_in *)&ifr.ifr_addr;
@@ -91,7 +97,7 @@ enum host_state arp_ping(char addr[]) {
   memcpy(arp_req.arp.sender_mac, sender_mac, 6); // Sender MAC
   arp_req.arp.sender_ip = sender_ip;             // Sender IP
   memset(arp_req.arp.target_mac, 0, 6);          // Target MAC (0s for request)
-  arp_req.arp.target_ip = inet_addr("172.20.10.1"); // Target IP
+  arp_req.arp.target_ip = inet_addr(addr);       // Target IP
 
   // ----- SENDING AND RECEIVING -----
 
@@ -101,19 +107,32 @@ enum host_state arp_ping(char addr[]) {
              (struct sockaddr *)&socket_addr, sizeof(socket_addr));
   if (bytes_sent < 0) {
     perror("sendto failed");
-    exit(EXIT_FAILURE);
+    return HOST_ERROR;
   }
+
+  struct timeval timeout;
+  timeout.tv_sec = 0;
+  timeout.tv_usec = 5;
+
+  errno = 0;
+  setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
 
   // Receiving packet
   unsigned char buffer[4096]; // Buffer for incoming packets
   while (1) {
     ssize_t bytes_recv =
         recvfrom(socket_fd, buffer, sizeof(buffer), 0, NULL, NULL);
+
+    if (errno == EAGAIN || errno == EWOULDBLOCK) {
+      close(socket_fd);
+      return HOST_DOWN;
+    }
+
     if (bytes_recv < 0) {
       perror("recvfrom failed");
-      exit(EXIT_FAILURE);
+      close(socket_fd);
+      return HOST_ERROR;
     }
-    printf("Received %zd bytes\n", bytes_recv);
 
     struct arp_packet *arp_reply = (struct arp_packet *)buffer;
 
@@ -131,17 +150,7 @@ enum host_state arp_ping(char addr[]) {
     if (arp_reply->arp.target_ip != sender_ip) {
       continue; // Skip if target is not our IP
     }
-
-    // Extract and print target MAC
-    printf("ARP Reply Received:\n");
-    printf("  Sender IP: %s\n",
-           inet_ntoa(*(struct in_addr *)&arp_reply->arp.sender_ip));
-    printf("  Sender MAC: %02x:%02x:%02x:%02x:%02x:%02x\n",
-           arp_reply->arp.sender_mac[0], arp_reply->arp.sender_mac[1],
-           arp_reply->arp.sender_mac[2], arp_reply->arp.sender_mac[3],
-           arp_reply->arp.sender_mac[4], arp_reply->arp.sender_mac[5]);
-    break;
+    close(socket_fd);
+    return HOST_UP;
   }
-
-  return HOST_UP;
 }

@@ -1,3 +1,5 @@
+#include <stddef.h>
+
 struct port_list {
   int *ports;
   size_t count;
