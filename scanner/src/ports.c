@@ -1,4 +1,8 @@
 #include "ports.h"
+<<<<<<< HEAD
+=======
+#include "log.h"
+>>>>>>> b37305b (scanner: arp ping and cidr parsing implementation)
 #include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
@@ -11,7 +15,12 @@ static int append_port(int **arrp, size_t *countp, size_t *capacityp,
     size_t newcap = (*capacityp) * 2;
     int *tmp = realloc(*arrp, newcap * sizeof(int));
     if (!tmp)
+<<<<<<< HEAD
       return -1;
+=======
+      ERROR_PRINT("Reallocation of port_list failed");
+    return -1;
+>>>>>>> b37305b (scanner: arp ping and cidr parsing implementation)
     *arrp = tmp;
     *capacityp = newcap;
   }
@@ -56,6 +65,7 @@ int parse_ports(const char *arg, struct port_list *out) {
 
     char *dash = strchr(token, '-');
     if (dash) {
+      DEBUG_PRINT("Port range detected.");
       /* port ranges */
       *dash = '\0';
       char *a_str = token;
@@ -99,12 +109,14 @@ int parse_ports(const char *arg, struct port_list *out) {
 
       for (int v = a; v <= b; ++v) {
         if (append_port(&arr, &count, &capacity, v) != 0) {
+          ERROR_PRINT("Appending port to port_list failed.");
           free(arr);
           free(port_string);
           return -1;
         }
       }
     } else {
+      DEBUG_PRINT("Single Port detected.");
       errno = 0;
       char *p = NULL;
       long val = strtol(token, &p, 10);
@@ -114,6 +126,7 @@ int parse_ports(const char *arg, struct port_list *out) {
         return -1;
       }
       if (append_port(&arr, &count, &capacity, (int)val) != 0) {
+        ERROR_PRINT("Appending port to port_list failed.");
         free(arr);
         free(port_string);
         return -1;

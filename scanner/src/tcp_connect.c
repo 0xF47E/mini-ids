@@ -1,4 +1,8 @@
 #include "tcp_connect.h"
+<<<<<<< HEAD
+=======
+#include "log.h"
+>>>>>>> b37305b (scanner: arp ping and cidr parsing implementation)
 #include <arpa/inet.h>
 #include <asm-generic/errno.h>
 #include <asm-generic/socket.h>
@@ -67,23 +71,36 @@ enum port_state tcp_connect(char addr[], int port) {
   int status, client_fd;
   struct sockaddr_in serv_addr;
 
+<<<<<<< HEAD
   fprintf(stderr, "DEBUG: tcp_connect called with addr=%s port=%d\n", addr,
           port);
+=======
+  DEBUG_PRINT("tcp_connect called with addr=%s port=%d", addr, port);
+>>>>>>> b37305b (scanner: arp ping and cidr parsing implementation)
 
   if ((client_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+    ERROR_PRINT("Socket creation failed.");
     return PORT_ERROR;
   }
 
   serv_addr.sin_family = AF_INET;
   serv_addr.sin_port = htons(port);
   if (inet_pton(AF_INET, addr, &serv_addr.sin_addr) <= 0) {
+    ERROR_PRINT("Parsing IP to network byte order failed.");
     return PORT_ERROR;
   }
 
   if ((status = connect_with_timeout(client_fd, (struct sockaddr *)&serv_addr,
+<<<<<<< HEAD
                                      sizeof(serv_addr), 5)) < 0) {
     fprintf(stderr, "DEBUG: connect_with_timeout returned -1, errno=%d (%s)\n",
             errno, strerror(errno));
+=======
+                                     sizeof(serv_addr), 1)) < 0) {
+
+    ERROR_PRINT("connect_with_timeout returned -1, errno=%d (%s)", errno,
+                strerror(errno));
+>>>>>>> b37305b (scanner: arp ping and cidr parsing implementation)
     switch (errno) {
     case ECONNREFUSED:
       return PORT_CLOSED;
