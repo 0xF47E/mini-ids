@@ -46,7 +46,7 @@ enum host_state arp_ping(char addr[]) {
 
   // Get interface details (MAC, IP, index)
   struct ifreq ifr;
-  const char *iface = "enp5s0";
+  const char *iface = "wlan0";
   strncpy(ifr.ifr_name, iface, IFNAMSIZ - 1);
 
   // Get interface index

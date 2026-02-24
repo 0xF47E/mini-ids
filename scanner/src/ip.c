@@ -97,23 +97,3 @@ int parse_ips(const char *arg, struct port_list *ports, time_t scan_time) {
     return 0;
   }
 }
-
-long cidr_parsing(const char *ip, const char *mask) {
-  if (ip == NULL)
-    return -1;
-  char *ip_string = strdup(ip);
-  if (ip_string == NULL)
-    return -1;
-
-  if (mask == NULL)
-    return -1;
-  char *subnetmask = strdup(mask);
-  if (subnetmask == NULL)
-    return -1;
-
-  char *p = NULL;
-  long prefix = strtol(subnetmask, &p, 10);
-  long host_bits = 32 - prefix;
-  long host_count = 1 << host_bits;
-  return host_count;
-}

@@ -5,6 +5,7 @@
 #include <bits/types/struct_timeval.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <netinet/in.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/select.h>
@@ -66,7 +67,8 @@ enum port_state tcp_connect(char addr[], int port) {
   int status, client_fd;
   struct sockaddr_in serv_addr;
 
-  fprintf(stderr, "DEBUG: tcp_connect called with addr=%s port=%d\n", addr, port);
+  fprintf(stderr, "DEBUG: tcp_connect called with addr=%s port=%d\n", addr,
+          port);
 
   if ((client_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
     return PORT_ERROR;
@@ -74,23 +76,14 @@ enum port_state tcp_connect(char addr[], int port) {
 
   serv_addr.sin_family = AF_INET;
   serv_addr.sin_port = htons(port);
-
   if (inet_pton(AF_INET, addr, &serv_addr.sin_addr) <= 0) {
     return PORT_ERROR;
   }
 
-  // TEST: simple blocking connect
-  fprintf(stderr, "DEBUG: testing simple connect...\n");
-  int test = connect(client_fd, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
-  fprintf(stderr, "DEBUG: simple connect returned %d, errno=%d\n", test, errno);
-  if (test == 0) {
-    fprintf(stderr, "DEBUG: simple connect succeeded!\n");
-    return PORT_OPEN;
-  }
-
   if ((status = connect_with_timeout(client_fd, (struct sockaddr *)&serv_addr,
                                      sizeof(serv_addr), 5)) < 0) {
-    fprintf(stderr, "DEBUG: connect_with_timeout returned -1, errno=%d (%s)\n", errno, strerror(errno));
+    fprintf(stderr, "DEBUG: connect_with_timeout returned -1, errno=%d (%s)\n",
+            errno, strerror(errno));
     switch (errno) {
     case ECONNREFUSED:
       return PORT_CLOSED;
