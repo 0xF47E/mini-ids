@@ -1,8 +1,5 @@
 #include "arp_ping.h"
-<<<<<<< HEAD
-=======
 #include "log.h"
->>>>>>> b37305b (scanner: arp ping and cidr parsing implementation)
 #include "ports.h"
 #include "tcp_connect.h"
 #include "util.h"
@@ -18,16 +15,11 @@
 #include <time.h>
 
 uint32_t cidr_to_mask(int prefix) {
-<<<<<<< HEAD
-  if (prefix <= 0 || prefix >= 32)
-    return 0;
-=======
   if (prefix <= 0 || prefix >= 32) {
     ERROR_PRINT("subnetmask out of range 0-32.");
     // returns all Fs because broadcast addr is calculated with: network | ~mask
     return 0xFFFFFFFF;
   }
->>>>>>> b37305b (scanner: arp ping and cidr parsing implementation)
   return (0xFFFFFFFF << (32 - prefix));
 }
 
@@ -37,13 +29,10 @@ void ip_to_buf(uint32_t ip, char *buf, size_t buflen) {
 }
 
 void handle_ip(const char *ip, struct port_list *ports, time_t scan_time) {
-<<<<<<< HEAD
-=======
   // if IP is localhost, no arp ping
   // TODO
 
   // if IP is not localhost, host discovery before trying tcp connection
->>>>>>> b37305b (scanner: arp ping and cidr parsing implementation)
   if (arp_ping(ip) == HOST_UP) {
     int port;
     for (size_t i = 0; i < ports->count; i++) {
@@ -95,10 +84,7 @@ int parse_ips(const char *arg, struct port_list *ports, time_t scan_time) {
 
   char *slash = strchr(ip_string, '/');
   if (slash) {
-<<<<<<< HEAD
-=======
     DEBUG_PRINT("CIDR notation detected, parsing multiple IP addresses.");
->>>>>>> b37305b (scanner: arp ping and cidr parsing implementation)
     char *saveptr = NULL;
     char *token = strtok_r(ip_string, "/", &saveptr);
     char *ip = strdup(token);
@@ -113,10 +99,7 @@ int parse_ips(const char *arg, struct port_list *ports, time_t scan_time) {
     return 0;
 
   } else {
-<<<<<<< HEAD
-=======
     DEBUG_PRINT("Single IP address detected.");
->>>>>>> b37305b (scanner: arp ping and cidr parsing implementation)
     // Handle single IP
     iterate_single(ip_string, ports, scan_time);
 

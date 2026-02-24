@@ -1,8 +1,5 @@
 #include "ports.h"
-<<<<<<< HEAD
-=======
 #include "log.h"
->>>>>>> b37305b (scanner: arp ping and cidr parsing implementation)
 #include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
@@ -15,12 +12,8 @@ static int append_port(int **arrp, size_t *countp, size_t *capacityp,
     size_t newcap = (*capacityp) * 2;
     int *tmp = realloc(*arrp, newcap * sizeof(int));
     if (!tmp)
-<<<<<<< HEAD
-      return -1;
-=======
       ERROR_PRINT("Reallocation of port_list failed");
     return -1;
->>>>>>> b37305b (scanner: arp ping and cidr parsing implementation)
     *arrp = tmp;
     *capacityp = newcap;
   }
