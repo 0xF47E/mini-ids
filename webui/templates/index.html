@@ -216,27 +216,63 @@ function addLog(message, type="info") {
 
 loadScans();
 
+/* ------------------ LOAD GRAPH NODES FROM SCAN RESULTS ------------------ */
+async function loadGraphNodes() {
+    try {
+        const resp = await fetch("/api/scans");
+        const data = await resp.json();
+        
+        if (!data.results || data.results.length === 0) {
+            return { nodes: [], links: [] };
+        }
+
+        const hosts = [...new Set(data.results.map(r => r[2]))];
+
+        const nodes = [];
+        const links = [];
+
+        nodes.push({ 
+            id: "Gateway", 
+            x: 400, 
+            y: 250, 
+            r: 25, 
+            info: "IP: 192.168.0.1\nStatus: Online" 
+        });
+
+        const centerX = 400, centerY = 250, radius = 180;
+
+        hosts.forEach((host, index) => {
+            const angle = (2 * Math.PI * index) / hosts.length;
+            const x = centerX + radius * Math.cos(angle);
+            const y = centerY + radius * Math.sin(angle);
+
+            nodes.push({
+                id: host,
+                x: x,
+                y: y,
+                r: 18,
+                info: `IP: ${host}\nStatus: Online`
+            });
+
+            links.push({ source: 0, target: nodes.length - 1 });
+        });
+
+        return { nodes, links };
+    } catch (e) {
+        console.error("Failed to load graph nodes:", e);
+        return { nodes: [], links: [] };
+    }
+}
+
 /* ------------------ INTERACTIVE GRAPH ------------------ */
-const svg = document.getElementById("network");
-const tooltip = document.getElementById("tooltip");
+async function initGraph() {
+    const { nodes, links } = await loadGraphNodes();
 
-const nodes = [
-    { id: "Core Router", x: 400, y: 250, r: 25, info: "IP: 192.168.0.1\nStatus: Online" },
-    { id: "Device A", x: 200, y: 100, r: 18, info: "IP: 192.168.0.2\nStatus: Active" },
-    { id: "Device B", x: 600, y: 100, r: 18, info: "IP: 192.168.0.3\nStatus: Active" },
-    { id: "Device C", x: 200, y: 400, r: 18, info: "IP: 192.168.0.4\nStatus: Idle" },
-    { id: "Device D", x: 600, y: 400, r: 18, info: "IP: 192.168.0.5\nStatus: Offline" }
-];
+    const svg = document.getElementById("network");
+    const tooltip = document.getElementById("tooltip");
 
-const links = [
-    { source: 0, target: 1 },
-    { source: 0, target: 2 },
-    { source: 0, target: 3 },
-    { source: 0, target: 4 }
-];
-
-let svgLinks = [];
-let svgNodes = [];
+    let svgLinks = [];
+    let svgNodes = [];
 
 links.forEach(link => {
     const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
@@ -303,9 +339,12 @@ function makeDraggable(element, node) {
         isDragging = false;
         element.style.cursor = "grab";
     });
+
+    update();
+}
 }
 
-update();
+initGraph();
 </script>
 
 </body>
