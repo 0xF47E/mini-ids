@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Network Monitoring Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+:root {
+    --bg: #0f172a;
+    --panel: #1e293b;
+    --accent: #3b82f6;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --danger: #ef4444;
+    --success: #22c55e;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: "Segoe UI", sans-serif;
+}
+
+body {
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+header {
+    padding: 15px 25px;
+    background: var(--panel);
+    border-bottom: 1px solid #334155;
+    font-weight: 600;
+    letter-spacing: 1px;
+}
+
+.container {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    grid-template-rows: 1fr 300px;
+    gap: 15px;
+    padding: 15px;
+}
+
+/* Panels */
+.panel {
+    background: var(--panel);
+    border-radius: 10px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+}
+
+.panel h2 {
+    font-size: 13px;
+    margin-bottom: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+}
+
+/* Logs */
+.logs { grid-row: 1 / span 2; }
+
+.log-frame {
+    flex: 1;
+    background: #0b1220;
+    border-radius: 6px;
+    padding: 10px;
+    overflow-y: auto;
+    font-family: monospace;
+    font-size: 13px;
+}
+
+.log-entry { margin-bottom: 5px; }
+.success { color: var(--success); }
+.error { color: var(--danger); }
+.info { color: var(--accent); }
+
+/* Graph */
+.graph-container {
+    flex: 1;
+    position: relative;
+}
+
+svg {
+    width: 100%;
+    height: 100%;
+}
+
+.link {
+    stroke: #475569;
+    stroke-width: 2;
+}
+
+.node {
+    fill: var(--accent);
+    cursor: grab;
+    transition: fill 0.2s;
+}
+
+.node:hover {
+    fill: var(--success);
+}
+
+/* Tooltip */
+.tooltip {
+    position: fixed;
+    background: #0b1220;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    pointer-events: none;
+    border: 1px solid #334155;
+    display: none;
+    white-space: pre-line;
+    z-index: 1000;
+}
+
+/* Diagram */
+.diagram-box {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 2px dashed #334155;
+    border-radius: 8px;
+    color: var(--muted);
+    font-size: 14px;
+}
+
+.graph { grid-column: 2; }
+.diagram { grid-column: 2; }
+
+/* Scrollbar */
+.log-frame::-webkit-scrollbar { width: 6px; }
+.log-frame::-webkit-scrollbar-thumb {
+    background: var(--accent);
+    border-radius: 3px;
+}
+</style>
+</head>
+
+<body>
+
+<header>Network Monitoring Dashboard</header>
+
+<div class="container">
+
+    <!-- Logs -->
+    <div class="panel logs">
+        <h2>System Logs</h2>
+        <div class="log-frame" id="logFrame">
+            <div class="log-entry info">[INFO] System initialized</div>
+            <div class="log-entry success">[OK] Core router online</div>
+        </div>
+    </div>
+
+    <!-- Interactive Graph -->
+    <div class="panel graph">
+        <h2>Connected Devices</h2>
+        <div class="graph-container">
+            <svg id="network" viewBox="0 0 800 500"></svg>
+            <div class="tooltip" id="tooltip"></div>
+        </div>
+    </div>
+
+    <!-- Diagram -->
+    <div class="panel diagram">
+        <h2>System Diagram</h2>
+        <div class="diagram-box">
+            Architecture Diagram Placeholder
+        </div>
+    </div>
+
+</div>
+
+<script>
+/* ------------------ LOAD SCANS FROM DB ------------------ */
+const logFrame = document.getElementById("logFrame");
+
+async function loadScans() {
+    try {
+        const resp = await fetch("/api/scans");
+        const data = await resp.json();
+        
+        if (data.results && data.results.length > 0) {
+            addLog(`[INFO] Loaded scan #${data.scan_id}`, "info");
+            data.results.forEach(r => {
+                const state = r[4]; // state column
+                const type = state === "open" ? "error" : "success";
+                addLog(`[${state.toUpperCase()}] ${r[2]}:${r[3]}`, type);
+            });
+        } else {
+            addLog("[INFO] No scan data found", "info");
+        }
+    } catch (e) {
+        addLog("[ERROR] Failed to load scans: " + e.message, "error");
+    }
+}
+
+function addLog(message, type="info") {
+    const entry = document.createElement("div");
+    entry.classList.add("log-entry", type);
+    entry.textContent = message;
+    logFrame.appendChild(entry);
+    logFrame.scrollTop = logFrame.scrollHeight;
+}
+
+loadScans();
+
+/* ------------------ LOAD GRAPH NODES FROM SCAN RESULTS ------------------ */
+async function loadGraphNodes() {
+    try {
+        const resp = await fetch("/api/scans");
+        const data = await resp.json();
+        
+        if (!data.results || data.results.length === 0) {
+            return { nodes: [], links: [] };
+        }
+
+        const hosts = [...new Set(data.results.map(r => r[2]))];
+
+        const nodes = [];
+        const links = [];
+
+        nodes.push({ 
+            id: "Gateway", 
+            x: 400, 
+            y: 250, 
+            r: 25, 
+            info: "IP: 192.168.0.1\nStatus: Online" 
+        });
+
+        const centerX = 400, centerY = 250, radius = 180;
+
+        hosts.forEach((host, index) => {
+            const angle = (2 * Math.PI * index) / hosts.length;
+            const x = centerX + radius * Math.cos(angle);
+            const y = centerY + radius * Math.sin(angle);
+
+            nodes.push({
+                id: host,
+                x: x,
+                y: y,
+                r: 18,
+                info: `IP: ${host}\nStatus: Online`
+            });
+
+            links.push({ source: 0, target: nodes.length - 1 });
+        });
+
+        return { nodes, links };
+    } catch (e) {
+        console.error("Failed to load graph nodes:", e);
+        return { nodes: [], links: [] };
+    }
+}
+
+/* ------------------ INTERACTIVE GRAPH ------------------ */
+async function initGraph() {
+    const { nodes, links } = await loadGraphNodes();
+
+    const svg = document.getElementById("network");
+    const tooltip = document.getElementById("tooltip");
+
+    let svgLinks = [];
+    let svgNodes = [];
+
+links.forEach(link => {
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.classList.add("link");
+    svg.appendChild(line);
+    svgLinks.push(line);
+});
+
+nodes.forEach((node, index) => {
+    const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    circle.setAttribute("r", node.r);
+    circle.classList.add("node");
+    svg.appendChild(circle);
+    svgNodes.push(circle);
+
+    circle.addEventListener("mousemove", (e) => {
+        tooltip.style.display = "block";
+        tooltip.style.left = e.pageX + 15 + "px";
+        tooltip.style.top = e.pageY + 15 + "px";
+        tooltip.innerText = node.id + "\n" + node.info;
+    });
+
+    circle.addEventListener("mouseleave", () => {
+        tooltip.style.display = "none";
+    });
+
+    makeDraggable(circle, node);
+});
+
+function update() {
+    svgNodes.forEach((circle, i) => {
+        circle.setAttribute("cx", nodes[i].x);
+        circle.setAttribute("cy", nodes[i].y);
+    });
+
+    svgLinks.forEach((line, i) => {
+        const link = links[i];
+        line.setAttribute("x1", nodes[link.source].x);
+        line.setAttribute("y1", nodes[link.source].y);
+        line.setAttribute("x2", nodes[link.target].x);
+        line.setAttribute("y2", nodes[link.target].y);
+    });
+}
+
+function makeDraggable(element, node) {
+    let isDragging = false;
+
+    element.addEventListener("mousedown", () => {
+        isDragging = true;
+        element.style.cursor = "grabbing";
+    });
+
+    window.addEventListener("mousemove", (e) => {
+        if (!isDragging) return;
+        const rect = svg.getBoundingClientRect();
+        const scaleX = 800 / rect.width;
+        const scaleY = 500 / rect.height;
+        node.x = (e.clientX - rect.left) * scaleX;
+        node.y = (e.clientY - rect.top) * scaleY;
+        update();
+    });
+
+    window.addEventListener("mouseup", () => {
+        isDragging = false;
+        element.style.cursor = "grab";
+    });
+
+    update();
+}
+}
+
+initGraph();
+</script>
+
+</body>
+</html>
