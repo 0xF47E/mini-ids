@@ -68,7 +68,7 @@ def get_lastest_scan_id():
     cur = con.cursor()
 
     res = cur.execute("""SELECT MAX(id) FROM scans;""")
-    last_scan_id = res.fetchall()
+    last_scan_id = res.fetchone()[0]
     con.close()
 
     return last_scan_id
